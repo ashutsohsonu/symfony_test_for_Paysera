@@ -1,0 +1,70 @@
+when@prod:
+    framework:
+        router:
+            strict_requirements: null
+
+framework:
+    secret: '%env(APP_SECRET)%'
+    http_method_override: false
+    handle_all_throwables: true
+
+    php_errors:
+        log: true
+
+    router:
+        utf8: true
+
+    serializer:
+        enable_attributes: true
+
+    validation:
+        enable_attributes: true
+
+    # ✅ Redis + Cache configuration (IMPORTANT)
+    cache:
+        default_redis_provider: '%env(REDIS_URL)%'
+
+    # ✅ Symfony RateLimiter (uses Redis via cache)
+    rate_limiter:
+        api:
+            policy: fixed_window
+            limit: 100
+            interval: '60 seconds'
+
+    messenger:
+        default_bus: command.bus
+        failure_transport: failed
+
+        transports:
+            async:
+                dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
+                retry_strategy:
+                    max_retries: 3
+                    delay: 1000
+                    multiplier: 2
+            failed:
+                dsn: 'doctrine://default?queue_name=failed'
+            sync: 'sync://'
+
+        buses:
+            command.bus:
+                middleware:
+                    - doctrine_transaction
+            query.bus: ~
+
+        routing:
+            'App\Application\Transfer\Command\TransferFundsCommand': sync
+            'App\Application\Account\Command\CreateAccountCommand': sync
+            'App\Application\Account\Query\GetAccountQuery': sync
+            'App\Application\Transfer\Query\GetTransferQuery': sync
+
+when@test:
+    framework:
+        test: true
+        cache:
+            app: cache.adapter.array   # in-memory cache for tests
+
+        messenger:
+            transports:
+                async:
+                    dsn: 'in-memory://'

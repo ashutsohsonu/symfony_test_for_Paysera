@@ -1,0 +1,60 @@
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+
+    App\:
+        resource: '../src/'
+        exclude:
+            - '../src/DependencyInjection/'
+            - '../src/Infrastructure/Persistence/Doctrine/Entity/'
+            - '../src/Infrastructure/Persistence/Doctrine/Migration/'
+            - '../src/Kernel.php'
+
+    # -------------------------------------------------------------------------
+    # Domain → Infrastructure bindings (Dependency Inversion Principle)
+    # -------------------------------------------------------------------------
+    App\Domain\Account\Repository\AccountRepositoryInterface:
+        class: App\Infrastructure\Persistence\Doctrine\Repository\DoctrineAccountRepository
+
+    App\Domain\Transfer\Repository\TransferRepositoryInterface:
+        class: App\Infrastructure\Persistence\Doctrine\Repository\DoctrineTransferRepository
+
+    # -------------------------------------------------------------------------
+    # Application services
+    # -------------------------------------------------------------------------
+    App\Application\Transfer\Service\IdempotencyService:
+        arguments:
+            $redis: '@snc_redis.default'
+            $ttl: 86400
+
+    App\Application\Transfer\Service\RateLimiterService:
+        arguments:
+            $redis: '@snc_redis.default'
+            $maxRequests: 100
+            $windowSeconds: 60
+
+    # -------------------------------------------------------------------------
+    # Named loggers
+    # -------------------------------------------------------------------------
+    App\Application\Transfer\Handler\TransferFundsCommandHandler:
+        arguments:
+            $logger: '@monolog.logger.transfer'
+
+    App\Http\Controller\TransferController:
+        arguments:
+            $logger: '@monolog.logger.transfer'
+
+    App\Http\Controller\AccountController:
+        arguments:
+            $logger: '@monolog.logger.transfer'
+
+    # -------------------------------------------------------------------------
+    # Global JSON exception handler (RFC 7807 Problem Details)
+    # -------------------------------------------------------------------------
+    App\Http\Exception\ApiExceptionListener:
+        arguments:
+            $logger: '@monolog.logger.request'
+            $env: '%kernel.environment%'
+        tags:
+            - { name: kernel.event_listener, event: kernel.exception, priority: 200 }

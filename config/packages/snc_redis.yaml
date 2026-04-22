@@ -1,0 +1,20 @@
+snc_redis:
+    clients:
+        default:
+            type: phpredis
+            alias: default
+            dsn: '%env(REDIS_URL)%'
+            logging: false
+            options:
+                prefix: 'fund_transfer:'
+
+when@test:
+    snc_redis:
+        clients:
+            default:
+                type: phpredis
+                alias: default
+                dsn: '%env(REDIS_URL)%'
+                logging: false
+                options:
+                    prefix: 'fund_transfer_test:'
